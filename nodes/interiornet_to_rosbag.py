@@ -41,7 +41,7 @@ def camera_to_world_with_pose(view_pose):
 
 
 def get_camera_info():
-    # Not entirely sure if it is correct lol. Check in ground truth ... cam0.ccam
+    # Not entirely sure if it is correct. Check in ground truth ... cam0.ccam
 
     camera_info = CameraInfo()
     camera_info.height = 480
@@ -147,7 +147,6 @@ def write_transform(view_pose, timestamp, frame_id, output_bag, publishers, publ
     msg = tfMessage()
     msg.transforms.append(trans)
 
-    #output_bag.write('/tf', msg, timestamp)
     write_msg("/tf", msg, output_bag, publishers, publish, timestamp)
 
 
@@ -191,7 +190,7 @@ def convert(scene_path, scene_type, light_type, traj, frame_step, to_frame, outp
     write_rgbd = True
     # Write instance image.
     write_instances = True
-    # Write colorized instance image.
+    # Write nyu mask image.
     write_instances_nyu_mask = False
     # Write colored pointclouds of the instance segments.
     write_object_segments = False
@@ -296,8 +295,6 @@ def convert(scene_path, scene_type, light_type, traj, frame_step, to_frame, outp
                 object_segment_pcl = convert_bgrd_to_pcl(
                     masked_bgr_image, masked_depth_image, camera_model)
                 object_segment_pcl.header = header
-                #output_bag.write('/scenenet_node/object_segment',
-                #                 object_segment_pcl, timestamp)
                 write_msg('/interiornet_node/object_segment', object_segment_pcl, output_bag, publishers, publish)
 
         if write_scene_pcl:
@@ -305,26 +302,20 @@ def convert(scene_path, scene_type, light_type, traj, frame_step, to_frame, outp
             scene_pcl = convert_bgrd_to_pcl(bgr_image, depth_image,
                                             camera_model)
             scene_pcl.header = header
-            #output_bag.write('/scenenet_node/scene', scene_pcl, timestamp)
             write_msg('/interiornet_node/scene', scene_pcl, output_bag, publishers, publish)
 
         if write_rgbd:
             # Write the RGBD data.
             bgr_msg = cvbridge.cv2_to_imgmsg(bgr_image, "bgr8")
             bgr_msg.header = header
-            #output_bag.write('/camera/rgb/image_raw', bgr_msg, timestamp)
             write_msg('/camera/rgb/image_raw', bgr_msg, output_bag, publishers, publish)
 
             depth_msg = cvbridge.cv2_to_imgmsg(depth_image, "16UC1")
             depth_msg.header = header
-            #output_bag.write('/camera/depth/image_raw', depth_msg, timestamp)
             write_msg('/camera/depth/image_raw', depth_msg, output_bag, publishers, publish)
 
             camera_info.header = header
 
-            #output_bag.write('/camera/rgb/camera_info', camera_info, timestamp)
-            #output_bag.write('/camera/depth/camera_info', camera_info,
-            #                 timestamp)
             write_msg('/camera/rgb/camera_info', camera_info, output_bag, publishers, publish)
             write_msg('/camera/depth/camera_info', camera_info, output_bag, publishers, publish)
 
@@ -333,8 +324,6 @@ def convert(scene_path, scene_type, light_type, traj, frame_step, to_frame, outp
             instance_msg = cvbridge.cv2_to_imgmsg(instance_image, "16UC1")
             instance_msg.header = header
 
-            #output_bag.write('/camera/instances/image_raw', instance_msg,
-            #                 timestamp)
             write_msg('/camera/instances/image_raw', instance_msg, output_bag, publishers, publish)
 
         if write_instances_nyu_mask:
@@ -345,8 +334,6 @@ def convert(scene_path, scene_type, light_type, traj, frame_step, to_frame, outp
                                                       "16UC3")
             instance_nyu_mask_msg.header = header
 
-            #output_bag.write('/camera/instances/nyu_mask', instance_nyu_mask_msg,
-            #                 timestamp)
             write_msg('/camera/instances/nyu_mask', instance_nyu_mask_msg, output_bag, publishers, publish)
 
         print("Dataset timestamp: " + '{:4}'.format(timestamp.secs) + "." +
@@ -403,9 +390,6 @@ if __name__ == '__main__':
         help="If set, publishes the data directly and does not save as bag file.")
     parser.set_defaults(publish=False)
 
-    # TODO: This is only for HD7 scenes. HD1-6 scenes have different format
-    #       and need to be implemented in the future.
-
     args = parser.parse_args()
     scene_path = args.scene_path
     frame_step = args.frame_step
@@ -417,9 +401,6 @@ if __name__ == '__main__':
     print(publish)
 
     # Read all scene paths from the scene list file.
-    # with open(scene_list_path) as f:
-    #     file_paths = f.readlines()
-    # scene_paths = [x.strip('.zip\n') for x in file_paths]
 
     publishers = {}
     if publish:
