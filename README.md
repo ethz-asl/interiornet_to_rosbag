@@ -5,10 +5,10 @@ Adapted from https://github.com/ethz-asl/scenenet_to_rosbag.
 
 ## The InteriorNet dataset
 The InteriorNet dataset is split into the following:
-1. 705 scenes with 3 ground truth trajectories and IMU data, color and depth images, ground truth instance images, with 1000 frames each at 25 frames per second. Each trajectory is available in regular lighting and random lighting. [(HD1-HD6)]
+1. 705 scenes with 3 ground truth trajectories and IMU data, color and depth images, ground truth instance images, with 1000 frames each, at 25 frames per second. Each trajectory is available in regular lighting and random lighting. *[HD1-HD6]*
 
 
-2. 20000 scenes with 20 random views with ground truth camera pose, color and depth images and ground truth instance and object class images. These views are also available in both regular lighting and random lighting. [HD7]
+2. 20000 scenes with 20 random views containing ground truth camera pose, color and depth images and ground truth instance and object class images. These views are also available in both regular lighting and random lighting. *[HD7]*
 
 
 ## How to use these tools
