@@ -236,7 +236,7 @@ def convert(scene_path, scene_type, light_type, traj, frame_step, to_frame, outp
             photo_path = os.path.join(scene_path, "cam0/data/{}.png".format(img_id))
         elif scene_type == 7 and light_type == "random":
             photo_path = os.path.join(scene_path, "random_lighting_cam0/data/{}.png".format(img_id))
-        elif scene_type < 7:
+        elif scene_type < 7 and light_type == "original":
             photo_path = os.path.join(scene_path, "{}_{}_{}".format(light_type, traj, traj),
                                       "cam0/data/{}.png".format(img_id))
 
@@ -338,7 +338,7 @@ def convert(scene_path, scene_type, light_type, traj, frame_step, to_frame, outp
 
         print("Dataset timestamp: " + '{:4}'.format(timestamp.secs) + "." +
               '{:09}'.format(timestamp.nsecs) + "     Frame: " +
-              '{:3}'.format(view_idx + 1) + " / " + str(np.shape(view_poses)[1]))
+              '{:3}'.format(view_idx + 1) + " / " + str(np.shape(view_poses)[0]))
 
         view_idx += frame_step
 
