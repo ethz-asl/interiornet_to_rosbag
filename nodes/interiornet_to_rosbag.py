@@ -267,7 +267,7 @@ def convert(scene_path, scene_type, light_type, traj, frame_step, to_frame, outp
         instance_image = cv2.imread(instance_path, cv2.IMREAD_UNCHANGED)
 
         # Transform depth values from the Euclidean ray length to the z coordinate.
-        depth_image = euclidean_ray_length_to_z_coordinate(
+        z_depth_image = euclidean_ray_length_to_z_coordinate(
             depth_image, camera_model)
 
         if write_object_segments:
@@ -278,7 +278,7 @@ def convert(scene_path, scene_type, light_type, traj, frame_step, to_frame, outp
                 instance_mask = np.ma.masked_not_equal(instance_image,
                                                        instance).mask
                 masked_depth_image = np.ma.masked_where(
-                    instance_mask, depth_image)
+                    instance_mask, z_depth_image)
 
                 # Workaround for when 2D mask is only False values and collapses to a single boolean False.
                 if not instance_mask.any():
@@ -299,7 +299,7 @@ def convert(scene_path, scene_type, light_type, traj, frame_step, to_frame, outp
 
         if write_scene_pcl:
             # Write the scene for the current view as pointcloud.
-            scene_pcl = convert_bgrd_to_pcl(bgr_image, depth_image,
+            scene_pcl = convert_bgrd_to_pcl(bgr_image, z_depth_image,
                                             camera_model)
             scene_pcl.header = header
             write_msg('/interiornet_node/scene', scene_pcl, output_bag, publishers, publish)
