@@ -176,9 +176,10 @@ def parse_frames(scene_path, scene_type, traj):
 
     # Prevent time being zero for HD7 scenes.
     if scene_type == 7:
-        times = times + 1.
+        # Convert to nanoseconds.
+        times = (times + 1.) * 1e9
     elif scene_type < 7:
-        times = times / 1e9
+        times = times
 
     return times, view_poses
 
@@ -221,7 +222,7 @@ def convert(scene_path, scene_type, light_type, traj, frame_step, to_frame, outp
         if publish:
             timestamp = rospy.Time.now()
         else:
-            timestamp = rospy.Time.from_sec(times[view_idx])
+            timestamp = rospy.Time.from_sec(times[view_idx] / 1e9)
         write_transform(view_pose, timestamp, frame_id, output_bag, publishers, publish)
         header.stamp = timestamp
 
@@ -238,25 +239,25 @@ def convert(scene_path, scene_type, light_type, traj, frame_step, to_frame, outp
             photo_path = os.path.join(scene_path, "random_lighting_cam0/data/{}.png".format(img_id))
         elif scene_type < 7:
             photo_path = os.path.join(scene_path, "{}_{}_{}".format(light_type, traj, traj),
-                                      "cam0/data/{:019d}.png".format(int(times[view_idx] * 1e9)))
+                                      "cam0/data/{:019d}.png".format(int(times[view_idx])))
 
         if scene_type == 7:
             depth_path = os.path.join(scene_path, "depth0/data/{}.png".format(img_id))
         elif scene_type < 7:
             depth_path = os.path.join(scene_path, "{}_{}_{}".format(light_type, traj, traj),
-                                      "depth0/data/{:019d}.png".format(int(times[view_idx] * 1e9)))
+                                      "depth0/data/{:019d}.png".format(int(times[view_idx])))
 
         if scene_type == 7:
             instance_path = os.path.join(scene_path, "label0/data/{}_instance.png".format(img_id))
         elif scene_type < 7:
             instance_path = os.path.join(scene_path, "{}_{}_{}".format(light_type, traj, traj),
-                                         "label0/data/{:019d}_instance.png".format(int(times[view_idx] * 1e9)))
+                                         "label0/data/{:019d}_instance.png".format(int(times[view_idx])))
 
         if scene_type == 7:
             nyu_mask_path = os.path.join(scene_path, "label0/data/{}_nyu_mask.png".format(img_id))
         elif scene_type < 7:
             nyu_mask_path = os.path.join(scene_path, "{}_{}_{}".format(light_type, traj, traj),
-                                         "label0/data/{:019d}_nyu_mask.png".format(int(times[view_idx] * 1e9)))
+                                         "label0/data/{:019d}_nyu_mask.png".format(int(times[view_idx])))
 
         if not os.path.exists(photo_path):
             print("InteriorNet RGB-D data not found at {0}".format(photo_path))
