@@ -236,27 +236,27 @@ def convert(scene_path, scene_type, light_type, traj, frame_step, to_frame, outp
             photo_path = os.path.join(scene_path, "cam0/data/{}.png".format(img_id))
         elif scene_type == 7 and light_type == "random":
             photo_path = os.path.join(scene_path, "random_lighting_cam0/data/{}.png".format(img_id))
-        elif scene_type < 7 and light_type == "original":
+        elif scene_type < 7:
             photo_path = os.path.join(scene_path, "{}_{}_{}".format(light_type, traj, traj),
-                                      "cam0/data/{}.png".format(img_id))
+                                      "cam0/data/{:019d}.png".format(int(times[view_idx] * 1e9)))
 
         if scene_type == 7:
             depth_path = os.path.join(scene_path, "depth0/data/{}.png".format(img_id))
         elif scene_type < 7:
             depth_path = os.path.join(scene_path, "{}_{}_{}".format(light_type, traj, traj),
-                                      "depth0/data/{}.png".format(img_id))
+                                      "depth0/data/{:019d}.png".format(int(times[view_idx] * 1e9)))
 
         if scene_type == 7:
             instance_path = os.path.join(scene_path, "label0/data/{}_instance.png".format(img_id))
         elif scene_type < 7:
             instance_path = os.path.join(scene_path, "{}_{}_{}".format(light_type, traj, traj),
-                                         "label0/data/{}_instance.png".format(img_id))
+                                         "label0/data/{:019d}_instance.png".format(int(times[view_idx] * 1e9)))
 
         if scene_type == 7:
             nyu_mask_path = os.path.join(scene_path, "label0/data/{}_nyu_mask.png".format(img_id))
         elif scene_type < 7:
             nyu_mask_path = os.path.join(scene_path, "{}_{}_{}".format(light_type, traj, traj),
-                                         "label0/data/{}_nyu_mask.png".format(img_id))
+                                         "label0/data/{:019d}_nyu_mask.png".format(int(times[view_idx] * 1e9)))
 
         if not os.path.exists(photo_path):
             print("InteriorNet RGB-D data not found at {0}".format(photo_path))
@@ -341,6 +341,8 @@ def convert(scene_path, scene_type, light_type, traj, frame_step, to_frame, outp
               '{:3}'.format(view_idx + 1) + " / " + str(np.shape(view_poses)[0]))
 
         view_idx += frame_step
+
+        rospy.sleep(0.5)
 
 
 if __name__ == '__main__':
