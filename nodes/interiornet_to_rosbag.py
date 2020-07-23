@@ -168,7 +168,6 @@ def parse_frames(scene_path, scene_type, traj):
     # First three lines are comments.
     # Two lines per frame (shutter speed is 0).
     # Poses are written in the file as eye, look-at, up (see cam0.render)
-    num_frames = lines.shape[0] / 2
     data = lines.to_numpy()
 
     view_poses = data[:, 1:]
@@ -184,7 +183,7 @@ def parse_frames(scene_path, scene_type, traj):
     return times, view_poses
 
 
-def convert(scene_path, scene_type, light_type, traj, frame_step, to_frame, output_bag, publishers, publish):
+def convert(scene_path, scene_type, light_type, traj, frame_step, to_frame, output_bag, publishers, publish=False):
     frame_id = "/interiornet_camera_frame"
 
     # Write RGB and depth images.
@@ -192,7 +191,8 @@ def convert(scene_path, scene_type, light_type, traj, frame_step, to_frame, outp
     # Write instance image.
     write_instances = True
     # Write nyu mask image.
-    write_instances_nyu_mask = False
+    write_nyu_color_mask = False
+    write_nyu_id_mask = True
     # Write colored pointclouds of the instance segments.
     write_object_segments = False
     # Write colored pointclouds of the whole scene.
@@ -240,6 +240,8 @@ def convert(scene_path, scene_type, light_type, traj, frame_step, to_frame, outp
         elif scene_type < 7:
             photo_path = os.path.join(scene_path, "{}_{}_{}".format(light_type, traj, traj),
                                       "cam0/data/{:019d}.png".format(int(times[view_idx])))
+        else:
+            print("WARNING: Wrong scene type or light type. Please use a valid scene or light type.")
 
         if scene_type == 7:
             depth_path = os.path.join(scene_path, "depth0/data/{}.png".format(img_id))
@@ -254,9 +256,15 @@ def convert(scene_path, scene_type, light_type, traj, frame_step, to_frame, outp
                                          "label0/data/{:019d}_instance.png".format(int(times[view_idx])))
 
         if scene_type == 7:
-            nyu_mask_path = os.path.join(scene_path, "label0/data/{}_nyu_mask.png".format(img_id))
+            nyu_id_path = os.path.join(scene_path, "label0/data/{}_nyu.png".format(img_id))
         elif scene_type < 7:
-            nyu_mask_path = os.path.join(scene_path, "{}_{}_{}".format(light_type, traj, traj),
+            nyu_id_path = os.path.join(scene_path, "{}_{}_{}".format(light_type, traj, traj),
+                                         "label0/data/{:019d}_nyu.png".format(int(times[view_idx])))
+
+        if scene_type == 7:
+            nyu_color_path = os.path.join(scene_path, "label0/data/{}_nyu_mask.png".format(img_id))
+        elif scene_type < 7:
+            nyu_color_path = os.path.join(scene_path, "{}_{}_{}".format(light_type, traj, traj),
                                          "label0/data/{:019d}_nyu_mask.png".format(int(times[view_idx])))
 
         if not os.path.exists(photo_path):
@@ -270,6 +278,7 @@ def convert(scene_path, scene_type, light_type, traj, frame_step, to_frame, outp
         # Transform depth values from the Euclidean ray length to the z coordinate.
         z_depth_image = euclidean_ray_length_to_z_coordinate(
             depth_image, camera_model)
+        # z_depth_image = depth_image
 
         if write_object_segments:
             # Write all the instances in the current view as pointclouds.
@@ -327,15 +336,27 @@ def convert(scene_path, scene_type, light_type, traj, frame_step, to_frame, outp
 
             write_msg('/camera/instances/image_raw', instance_msg, output_bag, publishers, publish)
 
-        if write_instances_nyu_mask:
-            instance_nyu_mask_image = cv2.imread(nyu_mask_path, cv2.IMREAD_UNCHANGED)
+        if write_nyu_id_mask:
+            nyu_id_image = cv2.imread(nyu_id_path, cv2.IMREAD_UNCHANGED)
 
             # Write the instance data colorized.
-            instance_nyu_mask_msg = cvbridge.cv2_to_imgmsg(instance_nyu_mask_image,
-                                                      "16UC3")
-            instance_nyu_mask_msg.header = header
+            nyu_id_msg = cvbridge.cv2_to_imgmsg(nyu_id_image,
+                                                           "16UC1")
+            nyu_id_msg.header = header
 
-            write_msg('/camera/instances/nyu_mask', instance_nyu_mask_msg, output_bag, publishers, publish)
+            write_msg('/camera/classes/nyu_id', nyu_id_msg,
+                      output_bag, publishers, publish)
+
+        if write_nyu_color_mask:
+            nyu_color_image = cv2.imread(nyu_color_path, cv2.IMREAD_UNCHANGED)
+
+            # Write the instance data colorized.
+            nyu_color_msg = cvbridge.cv2_to_imgmsg(nyu_color_image,
+                                                      "16UC3")
+            nyu_color_msg.header = header
+
+            write_msg('/camera/classes/nyu_color', nyu_color_msg,
+                      output_bag, publishers, publish)
 
         print("Dataset timestamp: " + '{:4}'.format(timestamp.secs) + "." +
               '{:09}'.format(timestamp.nsecs) + "     Frame: " +
@@ -343,7 +364,39 @@ def convert(scene_path, scene_type, light_type, traj, frame_step, to_frame, outp
 
         view_idx += frame_step
 
-        rospy.sleep(0.5)
+        if publish:
+            rospy.sleep(0.3)
+
+
+def init_publishers():
+    publishers = {
+        '/tf': rospy.Publisher('/tf', tfMessage, queue_size=5),
+        '/interiornet_node/object_segment': rospy.Publisher('/interiornet_node/object_segment', PointCloud2,
+                                                            queue_size=5),
+        '/interiornet_node/scene': rospy.Publisher('/interiornet_node/scene', PointCloud2, queue_size=5),
+        '/camera/rgb/image_raw': rospy.Publisher('/camera/rgb/image_raw', Image, queue_size=5),
+        '/camera/depth/image_raw': rospy.Publisher('/camera/depth/image_raw', Image, queue_size=5),
+        '/camera/rgb/camera_info': rospy.Publisher('/camera/rgb/camera_info', CameraInfo, queue_size=5),
+        '/camera/depth/camera_info': rospy.Publisher('/camera/depth/camera_info', CameraInfo, queue_size=5),
+        '/camera/instances/image_raw': rospy.Publisher('/camera/instances/image_raw', Image, queue_size=5),
+        '/camera/classes/nyu_mask': rospy.Publisher('/camera/classes/nyu_mask', Image, queue_size=5),
+        '/camera/classes/nyu_id': rospy.Publisher('/camera/classes/nyu_id', Image, queue_size=5),
+    }
+
+    print("Waiting for subscribers to connect...")
+    found = False
+    while not found:
+        for key, pub in publishers.items():
+            if pub.get_num_connections() > 0:
+                found = True
+                break
+
+    # Wait for the subscribers to connect properly. Better would to wait
+    # for all relevant subscribers to connect.
+    print("Subscriber found. Waiting 1 seconds before publishing.")
+    rospy.sleep(1.)
+
+    return publishers
 
 
 if __name__ == '__main__':
@@ -405,39 +458,16 @@ if __name__ == '__main__':
 
     # Read all scene paths from the scene list file.
 
-    publishers = {}
-    if publish:
-        publishers = {
-            '/tf': rospy.Publisher('/tf', tfMessage, queue_size=5),
-            '/interiornet_node/object_segment': rospy.Publisher('/interiornet_node/object_segment', PointCloud2, queue_size=5),
-            '/interiornet_node/scene': rospy.Publisher('/interiornet_node/scene', PointCloud2, queue_size=5),
-            '/camera/rgb/image_raw': rospy.Publisher('/camera/rgb/image_raw', Image, queue_size=5),
-            '/camera/depth/image_raw': rospy.Publisher('/camera/depth/image_raw', Image, queue_size=5),
-            '/camera/rgb/camera_info': rospy.Publisher('/camera/rgb/camera_info', CameraInfo, queue_size=5),
-            '/camera/depth/camera_info': rospy.Publisher('/camera/depth/camera_info', CameraInfo, queue_size=5),
-            '/camera/instances/image_raw': rospy.Publisher('/camera/instances/image_raw', Image, queue_size=5),
-            '/camera/instances/nyu_mask': rospy.Publisher('/camera/instances/nyu_mask', Image, queue_size=5),
-        }
-
     rospy.init_node('interiornet_node', anonymous=True)
+
+    if publish:
+        publishers = init_publishers()
+    else:
+        publishers = {}
 
     scene_path_split = scene_path.rsplit('/')
     scene_type = int(scene_path_split[-2][2])
     scene_name = scene_path_split[-1]
-
-    if publish:
-        print("Waiting for subscribers to connect...")
-        found = False
-        while not found:
-            for key, pub in publishers.items():
-                if pub.get_num_connections() > 0:
-                    found = True
-                    break
-
-        # Wait for the subscribers to connect properly. Better would to wait
-        # for all relevant subscribers to connect.
-        print("Subscriber found. Waiting 1 seconds before publishing.")
-        rospy.sleep(1.)
 
     if not output_bag_path.endswith(".bag"):
         output_bag_path = output_bag_path + ".bag"
