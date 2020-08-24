@@ -320,7 +320,7 @@ def convert(scene_path, scene_type, light_type, traj, frame_step, to_frame, outp
             bgr_msg.header = header
             write_msg('/camera/rgb/image_raw', bgr_msg, output_bag, publishers, publish)
 
-            depth_msg = cvbridge.cv2_to_imgmsg(depth_image, "16UC1")
+            depth_msg = cvbridge.cv2_to_imgmsg(z_depth_image, "16UC1")
             depth_msg.header = header
             write_msg('/camera/depth/image_raw', depth_msg, output_bag, publishers, publish)
 
